@@ -10,6 +10,10 @@ btcjs = require 'keybase-bitcoinjs-lib'
 
 #====================================================================================
 
+SATOSHI_PER_BTC = 100 * 1000 * 1000
+
+#====================================================================================
+
 exports.Runner = class Runner 
 
   #-----------------------------------
@@ -17,6 +21,7 @@ exports.Runner = class Runner
   constructor : () ->
     @config = {}
     @bitcoin_config = {}
+    @input_tx = null
 
   #-----------------------------------
 
@@ -31,6 +36,7 @@ exports.Runner = class Runner
         b : 'bitcoin-config'
         u : 'bitcoin-user'
         p : 'bitcoin-password'
+        n : 'confirmations'
       string : [ 'a', 'l', 'b' ]
     }
     cb null
@@ -68,8 +74,10 @@ exports.Runner = class Runner
 
   #-----------------------------------
 
-  get_amount : () ->
-    @cfg('amount') or (btcjs.networks.bitcoin.dustThreshold+1)
+  amount     : () -> @cfg('amount') or (btcjs.networks.bitcoin.dustThreshold+1)
+  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
+  max_amount : () -> 2*btcjs.networks.bitcion.feePerKb
+  min_confirmations : () -> @cfg('confirmations') or 3
 
   #-----------------------------------
 
@@ -85,9 +93,24 @@ exports.Runner = class Runner
 
   #-----------------------------------
 
-  find_transaction : (cb) ->
-    cb null
+  is_good_input_tx : (tx) ->
+    amt = tx.amount * SATOSHI_PER_BTC
+    (tx.address is @from_address()) and 
+      (amt >= @min_amount()) and (amt <= @max_amount()) and
+      (tx.confirmations >= @min_confirmations())
 
+  #-----------------------------------
+
+  find_transaction : (cb) ->
+    esc = make_esc cb, "Runner::find_transaction"
+    await @cli.listUnspent esc defer txs
+    for tx in txs
+      if @is_good_input_tx tx
+        @input_tx = tx
+        break
+    if not @input_tx?
+      err = new Error "Couldn't find spendable input transaction"
+    cb err
 
   #-----------------------------------
 
