@@ -30,7 +30,7 @@
     "iced-logger": "0.0.5",
     "iced-runtime": "0.0.2",
     "iced-utils": "^0.1.18",
-    "keybase-bitcoinjs-lib": "^0.2.0-1",
+    "keybase-bitcoinjs-lib": "^0.2.0-2",
     "minimist": "^0.1.0"
   }
 }
