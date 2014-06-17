@@ -30,7 +30,7 @@ exports.Runner = class Runner
       alias :
         c : 'config'
         d : 'data'
-        k : 'key'
+        f : 'from-address'
         a : 'amount'
         l : 'data-log'
         b : 'bitcoin-config'
@@ -44,6 +44,14 @@ exports.Runner = class Runner
   #-----------------------------------
 
   cfg : (k) -> @args[k] or @config[k]
+
+  #-----------------------------------
+
+  icfg : (k, def = null) ->
+    v = @config[k] unless (v = @args[k])?
+    if not v? then def
+    else if isNaN(v = parseInt(v, 10)) then null
+    else v
 
   #-----------------------------------
 
@@ -74,10 +82,11 @@ exports.Runner = class Runner
 
   #-----------------------------------
 
-  amount     : () -> @cfg('amount') or (btcjs.networks.bitcoin.dustThreshold+1)
+  amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
-  max_amount : () -> 2*btcjs.networks.bitcion.feePerKb
-  min_confirmations : () -> @cfg('confirmations') or 3
+  max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
+  min_confirmations : () -> @icfg('confirmations', 3)
+  from_address : () -> @cfg('from-address')
 
   #-----------------------------------
 
@@ -95,21 +104,36 @@ exports.Runner = class Runner
 
   is_good_input_tx : (tx) ->
     amt = tx.amount * SATOSHI_PER_BTC
-    (tx.address is @from_address()) and 
-      (amt >= @min_amount()) and (amt <= @max_amount()) and
-      (tx.confirmations >= @min_confirmations())
+    if (tx.address is @from_address()) and 
+         (amt >= @min_amount()) and (amt <= @max_amount()) and
+         (tx.confirmations >= @min_confirmations())
+      ret = amt - @min_amount()
+    else
+      ret = null
 
   #-----------------------------------
 
   find_transaction : (cb) ->
     esc = make_esc cb, "Runner::find_transaction"
-    await @cli.listUnspent esc defer txs
+    await @client.listUnspent esc defer txs
+    best_tx = null
+    best_waste = null
     for tx in txs
-      if @is_good_input_tx tx
-        @input_tx = tx
-        break
-    if not @input_tx?
+      if not (waste = @is_good_input_tx(tx))? then # noop
+      else if not(best_waste?) or waste < best_waste
+        best_tx = tx
+        best_waste = waste
+    if best_tx?
+      @input_tx = best_tx
+    else
       err = new Error "Couldn't find spendable input transaction"
+    cb err
+
+  #-----------------------------------
+
+  check_args : (cb) ->
+    err = null
+    if not @from_address()? then err = new Error "no from address to work with"
     cb err
 
   #-----------------------------------
@@ -118,8 +142,10 @@ exports.Runner = class Runner
     esc = make_esc cb, "Runner::main"
     await @parse_args argv, esc defer()
     await @read_config esc defer()
+    await @check_args esc defer()
     await @make_bitcoin_client esc defer()
     await @find_transaction esc defer()
+    console.log @input_tx
     #await @find_post_data esc defer()
     #await @get_private_key esc defer()
     #await @make_transaction esc defer()
