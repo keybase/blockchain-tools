@@ -29,23 +29,14 @@ exports.Runner = class Runner
       alias :
         c : 'config'
         t : 'to-address'
+        o : 'num-outputs'  
     }
 
   #-----------------------------------
 
-  from_address : () -> @cfg('from-address')
-
-  #-----------------------------------
-
-  make_bitcoin_client : (cb) ->
-    esc = make_esc cb, "Runner::make_bitcoin_client"
-    await @read_bitcoin_config esc defer()
-    cfg = {
-      user : @bitcoin_config.rpcuser
-      pass : @bitcoin_config.rpcpassword
-    }
-    @client = new Client cfg
-    cb null
+  # We're recharging the from address
+  to_address : () -> @args['to-address'] or @config['from-address']
+  num_outputs : () -> @icfg 'num-outputs'
 
   #-----------------------------------
 
@@ -57,6 +48,12 @@ exports.Runner = class Runner
       ret = amt - @min_amount()
     else
       ret = null
+
+  #-----------------------------------
+
+  tx_subtotal : () ->
+    # The number of outputs, each trying to send a min amount (including TX fee)
+    st = @num_outputs()*@min_amount()
 
   #-----------------------------------
 
@@ -80,7 +77,9 @@ exports.Runner = class Runner
 
   check_args : (cb) ->
     err = null
-    if not @from_address()? then err = new Error "no from address to work with"
+    if not @to_address()? then err = new Error "no to address to work with"
+    else if not @account()? then err = new Error "need to specify an account with -A"
+    else if not @num_outputs()? then err = new Error "need to specify # of outputs with -o"
     cb err
 
   #-----------------------------------
@@ -130,9 +129,7 @@ exports.Runner = class Runner
 
   run : (argv, cb) ->
     esc = make_esc cb, "Runner::main"
-    await @parse_args argv, esc defer()
-    await @read_config esc defer()
-    await @check_args esc defer()
+    await @init esc defer()
     await @make_post_data esc defer()
     await @make_bitcoin_client esc defer()
     await @find_transaction esc defer()

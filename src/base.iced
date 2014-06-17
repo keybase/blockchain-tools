@@ -87,7 +87,7 @@ exports.Base = class Base
 
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   account : () -> @cfg('account') 
-  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb - 800
+  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
   max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
   min_confirmations : () -> @icfg('confirmations', 3)
 
