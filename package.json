@@ -1,0 +1,34 @@
+{
+  "name": "merkle-root-blockchain",
+  "version": "0.0.0",
+  "description": "A tool to inject our Merkle Root into the bitcoin blockchain",
+  "main": "lib/main.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/keybase/merkle-root-blockchain"
+  },
+  "keywords": [
+    "Merkle",
+    "root",
+    "bitcoin",
+    "blockchain"
+  ],
+  "author": "Maxwell Krohn",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/keybase/merkle-root-blockchain/issues"
+  },
+  "homepage": "https://github.com/keybase/merkle-root-blockchain",
+  "dependencies": {
+    "bigint": "^0.4.2",
+    "bitcoin": "^2.1.2",
+    "iced-coffee-script": "^1.7.1-f",
+    "iced-error": "0.0.9",
+    "iced-runtime": "0.0.2",
+    "iced-utils": "^0.1.18",
+    "keybase-bitcoinjs-lib": "^0.2.0-1"
+  }
+}
