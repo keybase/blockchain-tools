@@ -29,15 +29,13 @@ exports.Runner = class Runner
     @args = minimist argv, {
       alias :
         c : 'config'
-        d : 'data'
         f : 'from-address'
         a : 'amount'
-        l : 'data-log'
         b : 'bitcoin-config'
         u : 'bitcoin-user'
         p : 'bitcoin-password'
         n : 'confirmations'
-      string : [ 'a', 'l', 'b' ]
+      string : [ 'l', 'b' ]
     }
     cb null
 
@@ -50,6 +48,7 @@ exports.Runner = class Runner
   icfg : (k, def = null) ->
     v = @config[k] unless (v = @args[k])?
     if not v? then def
+    else if typeof(v) is 'number' then v
     else if isNaN(v = parseInt(v, 10)) then null
     else v
 
@@ -83,7 +82,7 @@ exports.Runner = class Runner
   #-----------------------------------
 
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
-  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
+  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb - 800
   max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
   min_confirmations : () -> @icfg('confirmations', 3)
   from_address : () -> @cfg('from-address')
@@ -138,18 +137,61 @@ exports.Runner = class Runner
 
   #-----------------------------------
 
+  get_private_key : (cb) ->
+    await @client.dumpPrivKey @from_address(), defer err, @priv_key
+    cb err
+
+  #-----------------------------------
+
+  make_post_data : (cb) -> 
+    raw = @args._[0]
+    err = null
+    if not raw? then err = new Error "not post data given"
+    else if not raw.match /^[0-9a-fA-F]{40}$/ then err = new Error "post data must be a 40-btye hex hash"
+    else @post_data = new Buffer(raw, 'hex')
+    cb err
+
+  #-----------------------------------
+
+  make_transaction : (cb) ->
+    @data_to_address = (new btcjs.Address @post_data, 0).toBase58Check()
+    tx = new btcjs.Transaction
+    tx.addInput @input_tx.txid, @input_tx.vout
+    tx.addOutput @data_to_address, @amount()
+    skey = btcjs.ECKey.fromWIF @priv_key
+    tx.sign 0, skey
+    @out_tx = tx
+    cb null
+
+  #-----------------------------------
+
+  submit_transaction : (cb) ->
+    await @client.sendRawTransaction @out_tx.toHex(), defer err, @out_tx_id
+    cb err
+
+  #-----------------------------------
+
+  write_output : (cb) ->
+    console.log JSON.stringify {
+      @out_tx_id,
+      @data_to_address
+    }
+    cb null
+
+  #-----------------------------------
+
   run : (argv, cb) ->
     esc = make_esc cb, "Runner::main"
     await @parse_args argv, esc defer()
     await @read_config esc defer()
     await @check_args esc defer()
+    await @make_post_data esc defer()
     await @make_bitcoin_client esc defer()
     await @find_transaction esc defer()
-    console.log @input_tx
-    #await @find_post_data esc defer()
-    #await @get_private_key esc defer()
-    #await @make_transaction esc defer()
-    #await @submit_transaction esc defer()
+    await @get_private_key esc defer()
+    await @make_transaction esc defer()
+    await @submit_transaction esc defer()
+    await @write_output esc defer()
     cb null
 
   #-----------------------------------
