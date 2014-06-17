@@ -4,9 +4,10 @@ minimist = require 'minimist'
 path = require 'path'
 fs = require 'fs'
 log = require 'iced-logger'
-{a_json_parse} = require('iced-utils').util
+{dict_merge,a_json_parse} = require('iced-utils').util
 btcjs = require 'keybase-bitcoinjs-lib'
 {Client} = require 'bitcoin'
+{Base} = require './base'
 
 #====================================================================================
 
@@ -19,72 +20,19 @@ exports.Runner = class Runner
   #-----------------------------------
 
   constructor : () ->
-    @config = {}
-    @bitcoin_config = {}
-    @input_tx = null
+    super()
 
   #-----------------------------------
 
-  parse_args : (argv, cb) -> 
-    @args = minimist argv, {
+  get_opts : () ->
+    dict_merge @get_opts_base(), {
       alias :
         c : 'config'
-        f : 'from-address'
-        a : 'amount'
-        b : 'bitcoin-config'
-        u : 'bitcoin-user'
-        p : 'bitcoin-password'
-        n : 'confirmations'
-      string : [ 'l', 'b' ]
+        t : 'to-address'
     }
-    cb null
 
   #-----------------------------------
 
-  cfg : (k) -> @args[k] or @config[k]
-
-  #-----------------------------------
-
-  icfg : (k, def = null) ->
-    v = @config[k] unless (v = @args[k])?
-    if not v? then def
-    else if typeof(v) is 'number' then v
-    else if isNaN(v = parseInt(v, 10)) then null
-    else v
-
-  #-----------------------------------
-
-  read_config : (cb) ->
-    esc = make_esc cb, "Runner::read_config"
-    if (f = @args.config)?
-      await fs.readFile f, esc defer dat
-      await a_json_parse dat.toString('utf8'), esc defer @config
-    cb null
-
-  #-----------------------------------
-
-  read_bitcoin_config : (cb) ->
-    esc = make_esc cb, "Runner:read_bitcoin_config"
-    f = @cfg('bitcoin-config')
-    if (p = @cfg('bitcoin-password'))? and (u = @cfg('bitcoin-user'))?
-      @bitcoin_config.rpcuser = u
-      @bitcoin_config.rpcpassword = p
-    else if not(f?)
-      f = path.join process.env.HOME, ".bitcoin", "bitcoin.conf"
-    if f?
-      await fs.readFile f, esc defer dat
-      lines = dat.toString('utf8').split /\n+/
-      for line in lines
-        [a,v] = line.split /\s*=\s*/
-        @bitcoin_config[a] = v
-    cb null
-
-  #-----------------------------------
-
-  amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
-  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb - 800
-  max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
-  min_confirmations : () -> @icfg('confirmations', 3)
   from_address : () -> @cfg('from-address')
 
   #-----------------------------------
