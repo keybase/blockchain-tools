@@ -1,7 +1,9 @@
 {
-   "from-address" : "1HUCBSJeHnkhzrVKVjaVmWg2QtZS1mdfaz",
-   "amount" : 547,
-   "bitcoin-config" : "/vol/bitcoin0/home/.bitcoin/bitcoin.conf",
-   "account" : "keybase",
-   "min-confirmations" : 3
+  "from-address" : "1HUCBSJeHnkhzrVKVjaVmWg2QtZS1mdfaz",
+  "amount" : 547,
+  "bitcoin-config" : "/vol/bitcoin0/home/.bitcoin/bitcoin.conf",
+  "account" : "keybase",
+  "min-confirmations" : 3,
+  "status-file" : "/vol/bitcoin0/home/status.json",
+  "root-url" : "http://localhost:3000/_/api/1.0/merkle/root.json"
 }

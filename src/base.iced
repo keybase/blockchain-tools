@@ -39,8 +39,12 @@ exports.Base = class Base
 
   #-----------------------------------
 
+  # Can either pass a split argument vector, or parsed argument array.
   parse_args : (argv, cb) -> 
-    @args = minimist argv, @get_opts()
+    if (typeof(argv) is 'object') and Array.isArray(argv)
+      @args = minimist argv, @get_opts()
+    else
+      @args = argv
     cb null
 
   #-----------------------------------

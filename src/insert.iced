@@ -96,15 +96,22 @@ exports.Runner = class Runner extends Base
 
   #-----------------------------------
 
-  run : (argv, cb) ->
-    esc = make_esc cb, "Runner::main"
-    await @init argv, esc defer()
+  do_insert : (cb) ->
+    esc = make_esc cb, "Runner::do_insert"
     await @make_post_data esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_transaction esc defer()
     await @submit_transaction esc defer()
     await @write_output esc defer()
+    cb null
+
+  #-----------------------------------
+
+  run : (argv, cb) ->
+    esc = make_esc cb, "Runner::main"
+    await @init argv, esc defer()
+    await @do_insert esc defer()
     cb null
 
 #====================================================================================
