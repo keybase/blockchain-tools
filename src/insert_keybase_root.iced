@@ -60,7 +60,7 @@ exports.Runner = class Runner extends insert.Runner
 
   write_output : (cb) ->
     obj = JSON.stringify { @seqno, @out_tx_id, @data_to_address, hash : @hash.toString('hex') }
-    console.error @out_tx.toHex()
+    console.error "Raw transaction: #{@out_tx.toHex()}"
     console.log obj
     await fs.writeFile @status_file, obj, defer err
     cb err
