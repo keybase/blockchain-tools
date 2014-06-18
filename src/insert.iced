@@ -100,7 +100,6 @@ exports.Runner = class Runner extends Base
     esc = make_esc cb, "Runner::main"
     await @init argv, esc defer()
     await @make_post_data esc defer()
-    await @make_bitcoin_client esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_transaction esc defer()

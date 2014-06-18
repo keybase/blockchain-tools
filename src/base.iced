@@ -129,6 +129,7 @@ exports.Base = class Base
     await @parse_args argv, esc defer()
     await @read_config esc defer()
     await @check_args esc defer()
+    await @make_bitcoin_client esc defer()
     cb null
 
   #-----------------------------------
