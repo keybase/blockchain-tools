@@ -88,6 +88,7 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   write_output : (cb) ->
+    console.error @out_tx.toHex()
     console.log JSON.stringify {
       @out_tx_id,
       @data_to_address

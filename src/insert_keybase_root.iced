@@ -52,17 +52,17 @@ exports.Runner = class Runner extends insert.Runner
     if err?.code is 'ENOENT' then err = null
     else if err? then # noop
     else if not(json.seqno)? then err = new Error "no seqno field in status file"
-    else if not(json.seqno.match /^[0-9]+$/) then err = new Error "bad seqno field in status file"
-    else if parseInt(json.seqno,10) >= @seqno then err = new Error "no need for update @#{seqno}"
+    else if typeof(json.seqno) isnt "number" then err = new Error "bad seqno field in status file"
+    else if parseInt(json.seqno,10) >= @seqno then err = new Error "no need for update @#{@seqno}"
     cb err
 
   #-----------------------------------
 
   write_output : (cb) ->
-    obj = JSON.stringify { @seqno, @out_tx_id, @data_to_address, @hash }
+    obj = JSON.stringify { @seqno, @out_tx_id, @data_to_address, hash : @hash.toString('hex') }
+    console.error @out_tx.toHex()
+    console.log obj
     await fs.writeFile @status_file, obj, defer err
-    unless err?
-      console.log obj
     cb err
 
   #-----------------------------------
@@ -71,7 +71,7 @@ exports.Runner = class Runner extends insert.Runner
     esc = make_esc cb, "Runner::make_post_data"
     await @make_root_req esc defer()
     await @check_repeat esc defer()
-    cb new Error "bailing out!"
+    cb null
 
   #-----------------------------------
 
