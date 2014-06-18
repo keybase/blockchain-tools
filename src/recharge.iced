@@ -7,15 +7,11 @@ log = require 'iced-logger'
 {dict_merge,a_json_parse} = require('iced-utils').util
 btcjs = require 'keybase-bitcoinjs-lib'
 {Client} = require 'bitcoin'
-{Base} = require './base'
+{run,SATOSHI_PER_BTC,Base} = require './base'
 
 #====================================================================================
 
-SATOSHI_PER_BTC = 100 * 1000 * 1000
-
-#====================================================================================
-
-exports.Runner = class Runner 
+exports.Runner = class Runner extends Base
 
   #-----------------------------------
 
@@ -130,7 +126,7 @@ exports.Runner = class Runner
 
   run : (argv, cb) ->
     esc = make_esc cb, "Runner::main"
-    await @init esc defer()
+    await @init argv, esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_transaction esc defer()
@@ -142,13 +138,6 @@ exports.Runner = class Runner
 
 #====================================================================================
 
-exports.run = () ->
-  r = new Runner
-  await r.run process.argv[2...], defer err
-  rc = 0
-  if err?
-    log.error err.message
-    rc = err.rc or 2
-  process.exit rc
+exports.run = () -> run Runner
 
 #====================================================================================
