@@ -1,6 +1,6 @@
 {
   "name": "merkle-root-blockchain",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A tool to inject our Merkle Root into the bitcoin blockchain",
   "main": "lib/main.js",
   "scripts": {
