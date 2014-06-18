@@ -38,11 +38,12 @@ exports.Runner = class Runner extends Base
 
   is_good_input_tx : (tx) ->
     amt = tx.amount * SATOSHI_PER_BTC
-    diff = amt - @tx_rough_total
-    if (diff > 0) and (tx.account is account())
+    diff = amt - @tx_rough_total()
+    if (diff > 0) and (tx.account is @account()) and (tx.confirmations >= @min_confirmations())
       ret = -diff # We want the transaction with the most wiggle room, not the least...
     else
       ret = null
+    return ret
 
   #-----------------------------------
 
@@ -60,7 +61,7 @@ exports.Runner = class Runner extends Base
 
   check_args : (cb) ->
     err = null
-    if not @to_address()? then err = new Error "no to address to work with (specify with -a)"
+    if not @to_address()? then err = new Error "no to address to work with (specify with -t)"
     else if not @account()? then err = new Error "need to specify an 'account' with -A"
     else if not @num_outputs()? then err = new Error "need to specify # of outputs with -o"
     cb err
@@ -81,12 +82,11 @@ exports.Runner = class Runner extends Base
 
   make_transaction : (cb) ->
     err = null
-    @data_to_address = (new btcjs.Address @to_address(), 0).toBase58Check()
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
     num = @num_outputs()
     for i in [0...num]
-      tx.addOutput @data_to_address, @min_amount()
+      tx.addOutput @to_address(), @min_amount()
     skey = btcjs.ECKey.fromWIF @priv_key
 
     # Sign temporarily with a fictitious amount of change
@@ -95,7 +95,7 @@ exports.Runner = class Runner extends Base
 
     fee = btcjs.networks.bitcoin.estimateFee(tx)
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
-    if change < 0
+    if @change < 0
       err = new Error "Cannot transfer a negative amount of change"
     else
       tx.outs[change_offset].value = @change
@@ -106,8 +106,9 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   submit_transaction : (cb) ->
-    #await @client.sendRawTransaction @out_tx.toHex(), defer err, @out_tx_id
-    console.log @out_tx.toHex()
+    err = null
+    await @client.sendRawTransaction @out_tx.toHex(), defer err, @out_tx_id
+    console.error "Raw transaction: " + @out_tx.toHex()
     cb err
 
   #-----------------------------------
@@ -115,7 +116,7 @@ exports.Runner = class Runner extends Base
   write_output : (cb) ->
     console.log JSON.stringify {
       @out_tx_id,
-      @data_to_address,
+      to_address : @to_address(),
       @change,
       @change_address,
       input_tx_id : @input_tx.txid
@@ -129,6 +130,7 @@ exports.Runner = class Runner extends Base
     await @init argv, esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
+    await @make_change_address esc defer()
     await @make_transaction esc defer()
     await @submit_transaction esc defer()
     await @write_output esc defer()
