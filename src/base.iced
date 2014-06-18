@@ -33,7 +33,7 @@ exports.Base = class Base
       b : 'bitcoin-config'
       u : 'bitcoin-user'
       p : 'bitcoin-password'
-      n : 'confirmations'
+      m : 'min-confirmations'
     string : [ ]
   }
 
@@ -89,7 +89,7 @@ exports.Base = class Base
   account : () -> @cfg('account') 
   min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
   max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
-  min_confirmations : () -> @icfg('confirmations', 3)
+  min_confirmations : () -> @icfg('min-confirmations', 3)
 
   #-----------------------------------
 
