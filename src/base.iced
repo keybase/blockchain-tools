@@ -12,6 +12,8 @@ btcjs = require 'keybase-bitcoinjs-lib'
 
 exports.SATOSHI_PER_BTC = 100 * 1000 * 1000
 
+exports.pexpand = pexpand = (p) -> p?.replace /~/g, process.env.HOME
+
 #====================================================================================
 
 exports.Base = class Base
@@ -39,6 +41,14 @@ exports.Base = class Base
 
   #-----------------------------------
 
+  read_and_parse_json : (f, cb) ->
+    esc = make_esc cb, "Base::read_and_parse_json"
+    await fs.readFile f, esc defer dat
+    await a_json_parse dat.toString('utf8'), esc defer out
+    cb null, out
+
+  #-----------------------------------
+
   # Can either pass a split argument vector, or parsed argument array.
   parse_args : (argv, cb) -> 
     if (typeof(argv) is 'object') and Array.isArray(argv)
@@ -50,6 +60,7 @@ exports.Base = class Base
   #-----------------------------------
 
   cfg : (k) -> @args[k] or @config[k]
+  pcfg : (k) -> pexpand @cfg(k)
 
   #-----------------------------------
 
@@ -63,17 +74,16 @@ exports.Base = class Base
   #-----------------------------------
 
   read_config : (cb) ->
-    esc = make_esc cb, "Runner::read_config"
-    if (f = @args.config)?
-      await fs.readFile f, esc defer dat
-      await a_json_parse dat.toString('utf8'), esc defer @config
-    cb null
+    err = null
+    if (f = pexpand @args.config)?
+      await @read_and_parse_json f, defer err, @config
+    cb err
 
   #-----------------------------------
 
   read_bitcoin_config : (cb) ->
     esc = make_esc cb, "Runner:read_bitcoin_config"
-    f = @cfg('bitcoin-config')
+    f = @pcfg('bitcoin-config')
     if (p = @cfg('bitcoin-password'))? and (u = @cfg('bitcoin-user'))?
       @bitcoin_config.rpcuser = u
       @bitcoin_config.rpcpassword = p
