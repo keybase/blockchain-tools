@@ -1,4 +1,4 @@
-merkle-root-blockchain
+blockchain-tools
 ======================
 
-A tool to insert our Merkle root into the bitcoin blockchain.
+Tools to insert our Merkle root into the bitcoin blockchain.
