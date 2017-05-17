@@ -23,7 +23,6 @@
   },
   "homepage": "https://github.com/keybase/merkle-root-blockchain",
   "dependencies": {
-    "bigint": "^0.4.2",
     "bitcoin": "^2.1.2",
     "iced-coffee-script": "^1.7.1-f",
     "iced-error": "0.0.9",
@@ -32,6 +31,10 @@
     "iced-utils": "^0.1.18",
     "keybase-bitcoinjs-lib": "^0.2.0-2",
     "minimist": "^0.1.0",
-    "pgp-utils": "0.0.22"
+    "pgp-utils": "0.0.22",
+    "request": "2.81.0"
+  },
+  "devDependencies": {
+    "iced-test": "0.0.22"
   }
 }
