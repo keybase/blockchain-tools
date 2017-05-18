@@ -3,7 +3,6 @@
 minimist = require 'minimist'
 path = require 'path'
 fs = require 'fs'
-request = require 'request'
 log = require 'iced-logger'
 {dict_merge,a_json_parse} = require('iced-utils').util
 btcjs = require 'keybase-bitcoinjs-lib'
@@ -56,7 +55,7 @@ exports.Runner = class Runner extends Base
 
   tx_rough_total : () ->
     # A rought sense for the transaction cost, which is likely an overestimate.
-    @tx_subtotal() + Math.ceil(btcjs.networks.bitcoin.feePerKb * ((@num_outputs() + 2 )/150))
+    @tx_subtotal() + Math.ceil(@marginal_fee * 1000 * ((@num_outputs() + 2 )/150))
 
   #-----------------------------------
 
@@ -81,43 +80,6 @@ exports.Runner = class Runner extends Base
 
   #-----------------------------------
 
-  # Estimates fee per byte for a specific network opts.type needed to achieve
-  # verification before opts.maxClearanceMins minutes For bitcoin, returns in
-  # satoshis and uses the 21.co API with no fallback.
-  marginal_fee_estimator: (opts, cb) ->
-    esc = make_esc cb,'marginal_fee_estimator'
-    if opts.type == 'bitcoin'
-      apiUrl = 'https://bitcoinfees.21.co/api/v1/fees/list'
-      await request apiUrl, esc defer resp, body
-      if resp.statusCode == 200
-        fees = JSON.parse(body)['fees']
-        currentClearanceMins = 10000
-        idx = 0
-        while idx < fees.length and currentClearanceMins >= opts.maxClearanceMins
-          fee = fees[idx]
-          currentClearanceMins = fee['maxMinutes']
-          currentFee = fee['maxFee']
-          idx++
-        cb null, currentFee
-      else if resp.statusCode == 429
-        cb new Error("API limit has been reached"), 0
-    else if opts.type == 'litecoin'
-      cb null, 100
-    else
-      cb new Error("Unknown cryptocurrency " + opts.type), 0
-
-  # Estimates fee needed to send a transaction based on
-  # the parameters in @marginal_fee_estimator, capped by
-  # opts.feePerByteLimit and multiplied by opts.padding.
-  # No default parameters set.
-  fee_estimator : (opts, cb) ->
-    esc = make_esc cb,'fee_estimator'
-    await @marginal_fee_estimator opts, esc defer marginalFeeEstimate
-    feePerByte = Math.min opts.feePerByteLimit, marginalFeeEstimate
-    byteSize = opts.tx.toBuffer().length
-    fee = feePerByte * byteSize * opts.padding
-    cb err, fee
-
   make_transaction : (cb) ->
     err = null
     esc = make_esc cb,'make_transaction'
@@ -135,12 +97,12 @@ exports.Runner = class Runner extends Base
     # Can change these settings...
     btc_opts = {
         type: 'bitcoin',
-        maxClearanceMinutes: 1800,
+        maxClearanceMinutes: @max_clearance_minutes(),
         tx: tx,
-        feePerByteLimit: 1000,
-        padding: 1
+        feePerByteLimit: @fee_per_byte_limit(),
+        padding: @padding()
     }
-    await @fee_estimator btc_opts, esc defer fee
+    fee = @fee_estimator btc_opts
 
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
     if @change < 0
