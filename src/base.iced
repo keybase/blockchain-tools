@@ -116,8 +116,13 @@ exports.Base = class Base
   max_clearance_minutes : () -> @icfg('max-clearance-minutes', 240)
   padding : () -> @fcfg('padding', 1)
   min_confirmations : () -> @icfg('min-confirmations', 3)
-  min_amount : () -> @amount() + @marginal_fee
-  max_amount : () -> 2*@marginal_fee
+  abs_min_marginal_fee: () -> btcjs.networks.bitcoin.feePerKb/1000
+  min_amount : () -> @amount() + @marginal_fee*1000
+
+  # Some reasonable lower bound on the total cost to transact
+  abs_min_amount : () -> @amount() + @abs_min_marginal_fee*1000
+
+  max_amount : () -> 2*@marginal_fee*1000
 
   #-----------------------------------
 
