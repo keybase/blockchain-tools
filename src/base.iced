@@ -113,7 +113,7 @@ exports.Base = class Base
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   account : () -> @cfg('account')
   fee_per_byte_limit : () -> @icfg('fee-per-byte-limit', 1000)
-  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 240)
+  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 7200)
   padding : () -> @fcfg('padding', 1)
   min_confirmations : () -> @icfg('min-confirmations', 3)
   abs_min_marginal_fee: () -> btcjs.networks.bitcoin.feePerKb/1000
@@ -137,9 +137,9 @@ exports.Base = class Base
   #-----------------------------------
 
   # Estimates fee per byte for a specific network type needed to achieve
-  # verification before maxClearanceMins minutes For bitcoin, returns in
+  # verification before maxClearanceMinutes minutes For bitcoin, returns in
   # satoshis and uses the 21.co API with no fallback.
-  marginal_fee_estimator: ({type, maxClearanceMins}, cb) ->
+  marginal_fee_estimator: ({type, maxClearanceMinutes}, cb) ->
     esc = make_esc cb,'marginal_fee_estimator'
     if type == 'bitcoin'
       apiUrl = 'https://bitcoinfees.21.co/api/v1/fees/list'
@@ -147,12 +147,12 @@ exports.Base = class Base
       if resp.statusCode == 200
         await a_json_parse body, esc defer body_json
         await @aget body_json, 'fees', esc defer fees
-        currentClearanceMins = 10000
+        currentClearanceMinutes = 10000
         await @aassert Array.isArray(fees), esc defer()
-        for fee in fees when currentClearanceMins >= maxClearanceMins
-          await @aget fee, 'maxMinutes', esc defer currentClearanceMins
+        for fee in fees when currentClearanceMinutes >= maxClearanceMinutes
+          await @aget fee, 'maxMinutes', esc defer currentClearanceMinutes
           await @aget fee, 'maxFee', esc defer currentFee
-          await @aassert Number.isFinite(currentClearanceMins), esc defer()
+          await @aassert Number.isFinite(currentClearanceMinutes), esc defer()
           await @aassert Number.isFinite(currentFee), esc defer()
         cb null, currentFee
       else if resp.statusCode == 429
@@ -166,7 +166,7 @@ exports.Base = class Base
   # the parameters in @marginal_fee_estimator, capped by
   # feePerByteLimit and multiplied by padding.
   # No default parameters set.
-  fee_estimator : ({feePerByteLimit, tx, type, maxClearanceMins, padding}, cb) ->
+  fee_estimator : ({feePerByteLimit, tx, type, maxClearanceMinutes, padding}, cb) ->
     feePerByte = Math.min feePerByteLimit, @marginal_fee
     byteSize = tx.toBuffer().length
     return feePerByte * byteSize * padding
@@ -175,7 +175,7 @@ exports.Base = class Base
     esc = make_esc cb,'fee_estimator'
     opts = {
         type: 'bitcoin',
-        maxClearanceMins: @max_clearance_minutes()
+        maxClearanceMinutes: @max_clearance_minutes()
     }
     await @marginal_fee_estimator opts, esc defer @marginal_fee
     cb null
