@@ -36,8 +36,8 @@ exports.Runner = class Runner extends Base
 
   is_good_input_tx : (tx) ->
     amt = tx.amount * SATOSHI_PER_BTC
-    if (tx.address is @from_address()) and 
-         (amt >= @min_amount()) and (amt <= @max_amount()) and
+    if (tx.address is @from_address()) and
+         (amt >= @abs_min_amount() and (amt <= @max_amount()) and
          (tx.confirmations >= @min_confirmations()) and
          (not(a = @account())? or (tx.account is a))
       ret = amt - @min_amount()

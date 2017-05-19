@@ -4,6 +4,7 @@ minimist = require 'minimist'
 path = require 'path'
 fs = require 'fs'
 log = require 'iced-logger'
+request = require 'request'
 {a_json_parse} = require('iced-utils').util
 btcjs = require 'keybase-bitcoinjs-lib'
 {Client} = require 'bitcoin'
@@ -28,7 +29,7 @@ exports.Base = class Base
   #-----------------------------------
 
   get_opts_base : () -> {
-    alias : 
+    alias :
       c : 'config'
       a : 'amount'
       A : 'account'
@@ -64,12 +65,22 @@ exports.Base = class Base
 
   #-----------------------------------
 
-  icfg : (k, def = null) ->
-    v = @config[k] unless (v = @args[k])?
+  ncfg : (k, def, coercer) ->
+    v = @config[k] unless (@args? and v = @args[k])?
     if not v? then def
     else if typeof(v) is 'number' then v
-    else if isNaN(v = parseInt(v, 10)) then null
+    else if isNaN(v = coercer(v)) then null
     else v
+
+  #-----------------------------------
+
+  icfg : (k, def = null) ->
+    @ncfg(k, def, (x) -> parseInt(x, 10))
+
+  #-----------------------------------
+
+  fcfg : (k, def = null) ->
+    @ncfg(k, def, parseFloat)
 
   #-----------------------------------
 
@@ -100,12 +111,74 @@ exports.Base = class Base
   #-----------------------------------
 
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
-  account : () -> @cfg('account') 
-  min_amount : () -> @amount() + btcjs.networks.bitcoin.feePerKb
-  max_amount : () -> 2*btcjs.networks.bitcoin.feePerKb
+  account : () -> @cfg('account')
+  fee_per_byte_limit : () -> @icfg('fee-per-byte-limit', 1000)
+  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 240)
+  padding : () -> @fcfg('padding', 1)
   min_confirmations : () -> @icfg('min-confirmations', 3)
+  abs_min_marginal_fee: () -> btcjs.networks.bitcoin.feePerKb/1000
+  min_amount : () -> @amount() + @marginal_fee*1000
+
+  # Some reasonable lower bound on the total cost to transact
+  abs_min_amount : () -> @amount() + @abs_min_marginal_fee*1000
+
+  max_amount : () -> 2*@marginal_fee*1000
 
   #-----------------------------------
+
+  aget : (o, k, cb) ->
+    if k of o
+      return cb null, o[k]
+    cb new Error('''Key #{k} not found in object.'''), null
+
+  aassert : (x, cb) ->
+    if x == true then cb null else cb new Error('Assertion failed.')
+
+  #-----------------------------------
+
+  # Estimates fee per byte for a specific network type needed to achieve
+  # verification before maxClearanceMins minutes For bitcoin, returns in
+  # satoshis and uses the 21.co API with no fallback.
+  marginal_fee_estimator: ({type, maxClearanceMins}, cb) ->
+    esc = make_esc cb,'marginal_fee_estimator'
+    if type == 'bitcoin'
+      apiUrl = 'https://bitcoinfees.21.co/api/v1/fees/list'
+      await request apiUrl, esc defer resp, body
+      if resp.statusCode == 200
+        await a_json_parse body, esc defer body_json
+        await @aget body_json, 'fees', esc defer fees
+        currentClearanceMins = 10000
+        await @aassert Array.isArray(fees), esc defer()
+        for fee in fees when currentClearanceMins >= maxClearanceMins
+          await @aget fee, 'maxMinutes', esc defer currentClearanceMins
+          await @aget fee, 'maxFee', esc defer currentFee
+          await @aassert Number.isFinite(currentClearanceMins), esc defer()
+          await @aassert Number.isFinite(currentFee), esc defer()
+        cb null, currentFee
+      else if resp.statusCode == 429
+        cb new Error("API limit has been reached"), 0
+    else if type == 'litecoin'
+      cb null, 100
+    else
+      cb new Error("Unknown cryptocurrency " + type), 0
+
+  # Estimates fee needed to send a transaction based on
+  # the parameters in @marginal_fee_estimator, capped by
+  # feePerByteLimit and multiplied by padding.
+  # No default parameters set.
+  fee_estimator : ({feePerByteLimit, tx, type, maxClearanceMins, padding}, cb) ->
+    feePerByte = Math.min feePerByteLimit, @marginal_fee
+    byteSize = tx.toBuffer().length
+    return feePerByte * byteSize * padding
+
+  initialize_marginal_fee_estimate : (cb) ->
+    esc = make_esc cb,'fee_estimator'
+    opts = {
+        type: 'bitcoin',
+        maxClearanceMins: @max_clearance_minutes()
+    }
+    await @marginal_fee_estimator opts, esc defer @marginal_fee
+    cb null
 
   make_bitcoin_client : (cb) ->
     esc = make_esc cb, "Runner::make_bitcoin_client"
@@ -135,7 +208,6 @@ exports.Base = class Base
       err = new Error "Couldn't find spendable input transaction"
     cb err
 
-
   #-----------------------------------
 
   init : (argv, cb) ->
@@ -144,6 +216,7 @@ exports.Base = class Base
     await @read_config esc defer()
     await @check_args esc defer()
     await @make_bitcoin_client esc defer()
+    await @initialize_marginal_fee_estimate esc defer()
     cb null
 
   #-----------------------------------

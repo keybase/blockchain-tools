@@ -25,7 +25,7 @@ exports.Runner = class Runner extends Base
       alias :
         c : 'config'
         t : 'to-address'
-        o : 'num-outputs'  
+        o : 'num-outputs'
     }
 
   #-----------------------------------
@@ -55,7 +55,7 @@ exports.Runner = class Runner extends Base
 
   tx_rough_total : () ->
     # A rought sense for the transaction cost, which is likely an overestimate.
-    @tx_subtotal() + Math.ceil(btcjs.networks.bitcoin.feePerKb * ((@num_outputs() + 2 )/150))
+    @tx_subtotal() + Math.ceil(@marginal_fee * 1000 * ((@num_outputs() + 2 )/150))
 
   #-----------------------------------
 
@@ -82,6 +82,7 @@ exports.Runner = class Runner extends Base
 
   make_transaction : (cb) ->
     err = null
+    esc = make_esc cb,'make_transaction'
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
     num = @num_outputs()
@@ -93,7 +94,16 @@ exports.Runner = class Runner extends Base
     change_offset = tx.addOutput @change_address, 1
     tx.sign 0, skey
 
-    fee = btcjs.networks.bitcoin.estimateFee(tx)
+    # Can change these settings...
+    btc_opts = {
+        type: 'bitcoin',
+        maxClearanceMinutes: @max_clearance_minutes(),
+        tx: tx,
+        feePerByteLimit: @fee_per_byte_limit(),
+        padding: @padding()
+    }
+    fee = @fee_estimator btc_opts
+
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
     if @change < 0
       err = new Error "Cannot transfer a negative amount of change"
@@ -141,5 +151,6 @@ exports.Runner = class Runner extends Base
 #====================================================================================
 
 exports.run = () -> run Runner
+exports.Runner = Runner
 
 #====================================================================================
