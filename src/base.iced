@@ -126,6 +126,16 @@ exports.Base = class Base
 
   #-----------------------------------
 
+  aget : (o, k, cb) ->
+    if k of o
+      return cb null, o[k]
+    cb new Error('''Key #{k} not found in object.'''), null
+
+  aassert : (x, cb) ->
+    if x == true then cb null else cb new Error('Assertion failed.')
+
+  #-----------------------------------
+
   # Estimates fee per byte for a specific network type needed to achieve
   # verification before maxClearanceMins minutes For bitcoin, returns in
   # satoshis and uses the 21.co API with no fallback.
@@ -135,13 +145,17 @@ exports.Base = class Base
       apiUrl = 'https://bitcoinfees.21.co/api/v1/fees/list'
       await request apiUrl, esc defer resp, body
       if resp.statusCode == 200
-        fees = JSON.parse(body)['fees']
+        await a_json_parse body, esc defer body_json
+        await @aget body_json, 'fees', esc defer fees
         currentClearanceMins = 10000
         idx = 0
+        await @aassert Array.isArray(fees), esc defer()
         while idx < fees.length and currentClearanceMins >= maxClearanceMins
           fee = fees[idx]
-          currentClearanceMins = fee['maxMinutes']
-          currentFee = fee['maxFee']
+          await @aget fee, 'maxMinutes', esc defer currentClearanceMins
+          await @aget fee, 'maxFee', esc defer currentFee
+          await @aassert Number.isFinite(currentClearanceMins), esc defer()
+          await @aassert Number.isFinite(currentFee), esc defer()
           idx++
         cb null, currentFee
       else if resp.statusCode == 429
