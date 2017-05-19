@@ -148,15 +148,12 @@ exports.Base = class Base
         await a_json_parse body, esc defer body_json
         await @aget body_json, 'fees', esc defer fees
         currentClearanceMins = 10000
-        idx = 0
         await @aassert Array.isArray(fees), esc defer()
-        while idx < fees.length and currentClearanceMins >= maxClearanceMins
-          fee = fees[idx]
+        for fee in fees when currentClearanceMins >= maxClearanceMins
           await @aget fee, 'maxMinutes', esc defer currentClearanceMins
           await @aget fee, 'maxFee', esc defer currentFee
           await @aassert Number.isFinite(currentClearanceMins), esc defer()
           await @aassert Number.isFinite(currentFee), esc defer()
-          idx++
         cb null, currentFee
       else if resp.statusCode == 429
         cb new Error("API limit has been reached"), 0
