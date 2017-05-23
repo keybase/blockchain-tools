@@ -55,7 +55,8 @@ exports.Runner = class Runner extends Base
 
   tx_rough_total : () ->
     # A rought sense for the transaction cost, which is likely an overestimate.
-    @tx_subtotal() + Math.ceil(@marginal_fee * 1000 * ((@num_outputs() + 2 )/150))
+    # Need to confirm: how is ((@num_outputs() + 2 )/150)) estimating kb? empirical?
+    @tx_subtotal() + Math.ceil(@marginal_fee_per_byte * 1000 * ((@num_outputs() + 2 )/150))
 
   #-----------------------------------
 
@@ -64,6 +65,10 @@ exports.Runner = class Runner extends Base
     if not @to_address()? then err = new Error "no to address to work with (specify with -t)"
     else if not @account()? then err = new Error "need to specify an 'account' with -A"
     else if not @num_outputs()? then err = new Error "need to specify # of outputs with -o"
+    else if not @fee_per_byte_limit()? then err = new Error "need to specify fee-per-byte-limit in config file"
+    else if not @max_clearance_minutes()? then err = new Error "need to specify max-clearance-minutes in config file"
+    else if not @padding()? then err = new Error "need to specify padding in config file"
+    else if not @debug()? then err = new Error "need to specify debug in config filG"
     cb err
 
   #-----------------------------------
@@ -94,16 +99,10 @@ exports.Runner = class Runner extends Base
     change_offset = tx.addOutput @change_address, 1
     tx.sign 0, skey
 
-    # Can change these settings...
-    btc_opts = {
-        type: 'bitcoin',
-        maxClearanceMinutes: @max_clearance_minutes(),
-        tx: tx,
-        feePerByteLimit: @fee_per_byte_limit(),
-        padding: @padding()
-    }
-    fee = @fee_estimator btc_opts
+    fee = @fee_estimator { tx: tx }
 
+    if (@debug)
+      console.log('Expected total fee:', num*@min_amount() + fee)
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
     if @change < 0
       err = new Error "Cannot transfer a negative amount of change"
@@ -136,13 +135,18 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   run : (argv, cb) ->
+    if @debug
+      console.log("Running in debug mode")
+    else
+      console.log("Not running in debug mode")
     esc = make_esc cb, "Runner::main"
     await @init argv, esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_change_address esc defer()
     await @make_transaction esc defer()
-    await @submit_transaction esc defer()
+    if !@debug
+      await @submit_transaction esc defer()
     await @write_output esc defer()
     cb null
 
