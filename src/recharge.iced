@@ -66,7 +66,7 @@ exports.Runner = class Runner extends Base
     else if not @account()? then err = new Error "need to specify an 'account' with -A"
     else if not @num_outputs()? then err = new Error "need to specify # of outputs with -o"
     else if not @fee_per_byte_limit()? then err = new Error "need to specify fee-per-byte-limit in config file"
-    else if not @max_cleareance_minutes()? then err = new Error "need to specify max-clearance-minutes in config file"
+    else if not @max_clearance_minutes()? then err = new Error "need to specify max-clearance-minutes in config file"
     else if not @padding()? then err = new Error "need to specify padding in config file"
     else if not @debug()? then err = new Error "need to specify debug in config filG"
     cb err
@@ -135,7 +135,7 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   run : (argv, cb) ->
-    if debug
+    if @debug
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
@@ -145,7 +145,7 @@ exports.Runner = class Runner extends Base
     await @get_private_key esc defer()
     await @make_change_address esc defer()
     await @make_transaction esc defer()
-    if !debug
+    if !@debug
       await @submit_transaction esc defer()
     await @write_output esc defer()
     cb null

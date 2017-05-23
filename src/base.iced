@@ -51,7 +51,7 @@ exports.Base = class Base
   #-----------------------------------
 
   # Can either pass a split argument vector, or parsed argument array.
-  parse_args : (argv, cb) -> 
+  parse_args : (argv, cb) ->
     if (typeof(argv) is 'object') and Array.isArray(argv)
       @args = minimist argv, @get_opts()
     else
@@ -117,9 +117,9 @@ exports.Base = class Base
   account : () -> @cfg('account')
   debug : () -> @cfg('debug')
 
-  fee_per_byte_limit : () -> @icfg('fee-per-byte-limit', 1000)
-  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 240)
-  padding : () -> @fcfg('padding', 1)
+  fee_per_byte_limit : () -> @icfg('fee-per-byte-limit')
+  max_clearance_minutes : () -> @icfg('max-clearance-minutes')
+  padding : () -> @fcfg('padding')
   min_confirmations : () -> @icfg('min-confirmations', 3)
   abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
     # Only 1 KB? What if its more...https://blockchain.info/tx/099a877971ee29b7a26087ddfd1c0ea00d195a509a5f5ba3625c2981b39b9bd0 
@@ -172,7 +172,6 @@ exports.Base = class Base
   # Estimates fee needed to send a transaction based on
   # the parameters in @marginal_fee_per_byte_estimator, capped by
   # feePerByteLimit and multiplied by padding.
-  # No default parameters set.
   fee_estimator : ({tx}, cb) ->
     feePerByte = Math.min @fee_per_byte_limit(), @marginal_fee_per_byte
     byteSize = tx.toBuffer().length

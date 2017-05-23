@@ -74,7 +74,7 @@ exports.Runner = class Runner extends Base
     @data_to_address = (new btcjs.Address @post_data, 0).toBase58Check()
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
-    if debug
+    if @debug
       console.log("Transaction amount is ", @amount)
     tx.addOutput @data_to_address, @amount()
     skey = btcjs.ECKey.fromWIF @priv_key
@@ -106,7 +106,7 @@ exports.Runner = class Runner extends Base
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_transaction esc defer()
-    if !debug
+    if !@debug
       await @submit_transaction esc defer()
     await @write_output esc defer()
     cb null
@@ -114,7 +114,7 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   run : (argv, cb) ->
-    if debug
+    if @debug
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
