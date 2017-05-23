@@ -122,11 +122,11 @@ exports.Base = class Base
   padding : () -> @fcfg('padding')
   min_confirmations : () -> @icfg('min-confirmations', 3)
   abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
-    # Only 1 KB? What if its more...https://blockchain.info/tx/099a877971ee29b7a26087ddfd1c0ea00d195a509a5f5ba3625c2981b39b9bd0 
-  min_amount : () -> @amount() + @marginal_fee_per_byte*1000
+  # each small transaction is roughly 180B, so we pay for that plus dust
+  min_amount : () -> @amount() + @marginal_fee_per_byte * 190
 
   # Some reasonable lower bound on the total cost to transact
-  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte*1000
+  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte * 190
 
   # so just between 1 kb and 2kb..?, letting dust be negligble
   max_amount : () -> 2*@marginal_fee_per_byte*1000
@@ -175,6 +175,7 @@ exports.Base = class Base
   fee_estimator : ({tx}, cb) ->
     feePerByte = Math.min @fee_per_byte_limit(), @marginal_fee_per_byte
     byteSize = tx.toBuffer().length
+    console.log feePerByte * 327 * @padding()
     return feePerByte * byteSize * @padding()
 
   initialize_marginal_fee_per_byte_estimate : (cb) ->
