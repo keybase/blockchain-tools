@@ -8,5 +8,6 @@
   "root-url" : "http://localhost:3000/_/api/1.0/merkle/root.json",
   "fee-per-byte-limit": 1000,
   "max-clearance-minutes": 3600,
-  "padding": 1
+  "padding": 1,
+  "debug": true
 }

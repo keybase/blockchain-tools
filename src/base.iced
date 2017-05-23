@@ -110,19 +110,26 @@ exports.Base = class Base
 
   #-----------------------------------
 
+  # Each Bitcoin transaction needs to be at least dustThresold satoshis
+  # for the network to accept it, otherwise the network considers it spam
+  # ("dust")
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   account : () -> @cfg('account')
+  debug : () -> @cfg('debug')
+
   fee_per_byte_limit : () -> @icfg('fee-per-byte-limit', 1000)
-  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 7200)
+  max_clearance_minutes : () -> @icfg('max-clearance-minutes', 240)
   padding : () -> @fcfg('padding', 1)
   min_confirmations : () -> @icfg('min-confirmations', 3)
-  abs_min_marginal_fee: () -> btcjs.networks.bitcoin.feePerKb/1000
-  min_amount : () -> @amount() + @marginal_fee*1000
+  abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
+    # Only 1 KB? What if its more...https://blockchain.info/tx/099a877971ee29b7a26087ddfd1c0ea00d195a509a5f5ba3625c2981b39b9bd0 
+  min_amount : () -> @amount() + @marginal_fee_per_byte*1000
 
   # Some reasonable lower bound on the total cost to transact
-  abs_min_amount : () -> @amount() + @abs_min_marginal_fee*1000
+  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte*1000
 
-  max_amount : () -> 2*@marginal_fee*1000
+  # so just between 1 kb and 2kb..?, letting dust be negligble
+  max_amount : () -> 2*@marginal_fee_per_byte*1000
 
   #-----------------------------------
 
@@ -139,8 +146,8 @@ exports.Base = class Base
   # Estimates fee per byte for a specific network type needed to achieve
   # verification before maxClearanceMinutes minutes For bitcoin, returns in
   # satoshis and uses the 21.co API with no fallback.
-  marginal_fee_estimator: ({type, maxClearanceMinutes}, cb) ->
-    esc = make_esc cb,'marginal_fee_estimator'
+  marginal_fee_per_byte_estimator: ({type, maxClearanceMinutes}, cb) ->
+    esc = make_esc cb,'marginal_fee_per_byte_estimator'
     if type == 'bitcoin'
       apiUrl = 'https://bitcoinfees.21.co/api/v1/fees/list'
       await request apiUrl, esc defer resp, body
@@ -163,21 +170,22 @@ exports.Base = class Base
       cb new Error("Unknown cryptocurrency " + type), 0
 
   # Estimates fee needed to send a transaction based on
-  # the parameters in @marginal_fee_estimator, capped by
+  # the parameters in @marginal_fee_per_byte_estimator, capped by
   # feePerByteLimit and multiplied by padding.
   # No default parameters set.
-  fee_estimator : ({feePerByteLimit, tx, type, maxClearanceMinutes, padding}, cb) ->
-    feePerByte = Math.min feePerByteLimit, @marginal_fee
+  fee_estimator : ({tx}, cb) ->
+    feePerByte = Math.min @fee_per_byte_limit(), @marginal_fee_per_byte
     byteSize = tx.toBuffer().length
-    return feePerByte * byteSize * padding
+    return feePerByte * byteSize * @padding()
 
-  initialize_marginal_fee_estimate : (cb) ->
+  initialize_marginal_fee_per_byte_estimate : (cb) ->
     esc = make_esc cb,'fee_estimator'
     opts = {
         type: 'bitcoin',
         maxClearanceMinutes: @max_clearance_minutes()
     }
-    await @marginal_fee_estimator opts, esc defer @marginal_fee
+    await @aassert opts.maxClearanceMinutes?, esc defer()
+    await @marginal_fee_per_byte_estimator opts, esc defer @marginal_fee_per_byte
     cb null
 
   make_bitcoin_client : (cb) ->
@@ -216,7 +224,7 @@ exports.Base = class Base
     await @read_config esc defer()
     await @check_args esc defer()
     await @make_bitcoin_client esc defer()
-    await @initialize_marginal_fee_estimate esc defer()
+    await @initialize_marginal_fee_per_byte_estimate esc defer()
     cb null
 
   #-----------------------------------

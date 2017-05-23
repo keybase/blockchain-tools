@@ -49,6 +49,7 @@ exports.Runner = class Runner extends Base
   check_args : (cb) ->
     err = null
     if not @from_address()? then err = new Error "no from address to work with"
+    else if not @debug()? then err = new Error "need to specify debug in config file"
     cb err
 
   #-----------------------------------
@@ -59,7 +60,7 @@ exports.Runner = class Runner extends Base
 
   #-----------------------------------
 
-  make_post_data : (cb) -> 
+  make_post_data : (cb) ->
     raw = @args._[0]
     err = null
     if not raw? then err = new Error "not post data given"
@@ -73,6 +74,8 @@ exports.Runner = class Runner extends Base
     @data_to_address = (new btcjs.Address @post_data, 0).toBase58Check()
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
+    if debug
+      console.log("Transaction amount is ", @amount)
     tx.addOutput @data_to_address, @amount()
     skey = btcjs.ECKey.fromWIF @priv_key
     tx.sign 0, skey
@@ -103,13 +106,18 @@ exports.Runner = class Runner extends Base
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_transaction esc defer()
-    await @submit_transaction esc defer()
+    if !debug
+      await @submit_transaction esc defer()
     await @write_output esc defer()
     cb null
 
   #-----------------------------------
 
   run : (argv, cb) ->
+    if debug
+      console.log("Running in debug mode")
+    else
+      console.log("Not running in debug mode")
     esc = make_esc cb, "Runner::main"
     await @init argv, esc defer()
     await @do_insert esc defer()
