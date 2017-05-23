@@ -101,8 +101,10 @@ exports.Runner = class Runner extends Base
 
     fee = @fee_estimator { tx: tx }
 
-    if (@debug)
-      console.log('Expected total fee:', num*@min_amount() + fee)
+    if @debug()
+      console.log 'Expected total fee: ', num*@min_amount() + fee
+      console.log 'Fee per inner transaction: ', @min_amount()
+      console.log 'Number of inner transactions: ', num
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
     if @change < 0
       err = new Error "Cannot transfer a negative amount of change"
@@ -145,7 +147,7 @@ exports.Runner = class Runner extends Base
     await @get_private_key esc defer()
     await @make_change_address esc defer()
     await @make_transaction esc defer()
-    if !@debug
+    if !@debug()
       await @submit_transaction esc defer()
     await @write_output esc defer()
     cb null
