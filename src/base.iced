@@ -11,10 +11,10 @@ btcjs = require 'keybase-bitcoinjs-lib'
 
 #====================================================================================
 
-exports.SATOSHI_PER_BTC = 100 * 1000 * 1000
+exports.SATOSHI_PER_BTC = SATOSHI_PER_BTC = 100 * 1000 * 1000
 
 # Source: https://bitcoin.stackexchange.com/questions/1195/how-to-calculate-transaction-size-before-sending
-exports.SUP_MIN_TX_SIZE = 1*148 + 1*34 + 10 + 1
+exports.SUP_MIN_TX_SIZE = SUP_MIN_TX_SIZE = 1*148 + 1*34 + 10 + 1
 
 exports.pexpand = pexpand = (p) -> p?.replace /~/g, process.env.HOME
 
@@ -196,6 +196,21 @@ exports.Base = class Base
     await @marginal_fee_per_byte_estimator opts, esc defer @marginal_fee_per_byte
     cb null
 
+  satoshi_conversion_estimator : (cb) ->
+    esc = make_esc cb,'satoshi_conversion_estimator'
+    apiUrl = 'https://blockchain.info/ticker'
+    await request apiUrl, esc defer resp, body
+    if resp.statusCode == 200
+      await a_json_parse body, esc defer body_json
+      cb null, body_json.USD['15m'] / SATOSHI_PER_BTC
+    else
+      cb new Error("Unknown API error"), 0
+
+  initialize_satoshi_conversion_estimate : (cb) ->
+    esc = make_esc cb,'initialize_satoshi_conversion_estimate'
+    await @satoshi_conversion_estimator esc defer @usd_per_satoshi
+    cb null
+
   make_bitcoin_client : (cb) ->
     esc = make_esc cb, "Runner::make_bitcoin_client"
     await @read_bitcoin_config esc defer()
@@ -233,6 +248,7 @@ exports.Base = class Base
     await @check_args esc defer()
     await @make_bitcoin_client esc defer()
     await @initialize_marginal_fee_per_byte_estimate esc defer()
+    await @initialize_satoshi_conversion_estimate esc defer()
     cb null
 
   #-----------------------------------

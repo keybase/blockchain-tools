@@ -102,9 +102,10 @@ exports.Runner = class Runner extends Base
     fee = @fee_estimator { tx: tx }
 
     if @debug()
-      console.log 'Expected total fee: ', num*@min_amount() + fee
-      console.log 'Fee per inner transaction: ', @min_amount()
+      expected_fee = num*@min_amount() + fee
       console.log 'Number of inner transactions: ', num
+      console.log "Expected total fee: #{expected_fee} satoshis, #{expected_fee * @usd_per_satoshi} USD"
+      console.log "Fee per inner transaction: #{@min_amount()} satoshis, #{@min_amount() * @usd_per_satoshi} USD"
     @change = @input_tx.amount * SATOSHI_PER_BTC - num*@min_amount() - fee
     if @change < 0
       err = new Error "Cannot transfer a negative amount of change"
