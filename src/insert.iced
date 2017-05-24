@@ -49,7 +49,7 @@ exports.Runner = class Runner extends Base
   check_args : (cb) ->
     err = null
     if not @from_address()? then err = new Error "no from address to work with"
-    else if not @debug()? then err = new Error "need to specify debug in config file"
+    else if not @debug()? then err = new Error "need to specify debug with -d parameter or in config file"
     cb err
 
   #-----------------------------------

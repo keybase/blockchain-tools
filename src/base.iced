@@ -13,6 +13,9 @@ btcjs = require 'keybase-bitcoinjs-lib'
 
 exports.SATOSHI_PER_BTC = 100 * 1000 * 1000
 
+# Source: https://bitcoin.stackexchange.com/questions/1195/how-to-calculate-transaction-size-before-sending
+exports.SUP_MIN_TX_SIZE = 1*148 + 1*34 + 10 + 1
+
 exports.pexpand = pexpand = (p) -> p?.replace /~/g, process.env.HOME
 
 #====================================================================================
@@ -37,6 +40,7 @@ exports.Base = class Base
       u : 'bitcoin-user'
       p : 'bitcoin-password'
       m : 'min-confirmations'
+      d : 'debug'
     string : [ ]
   }
 
@@ -65,22 +69,27 @@ exports.Base = class Base
 
   #-----------------------------------
 
-  ncfg : (k, def, coercer) ->
+  tcfg : (k, def, typename, coercer, coercionChecker) ->
     v = @config[k] unless (@args? and v = @args[k])?
     if not v? then def
-    else if typeof(v) is 'number' then v
-    else if isNaN(v = coercer(v)) then null
+    else if typeof(v) is typename then v
+    else if coercionChecker(v = coercer(v)) then null
     else v
 
   #-----------------------------------
 
   icfg : (k, def = null) ->
-    @ncfg(k, def, (x) -> parseInt(x, 10))
+    @tcfg(k, def, 'number', ((x) -> parseInt(x, 10)), isNaN)
 
   #-----------------------------------
 
   fcfg : (k, def = null) ->
-    @ncfg(k, def, parseFloat)
+    @tcfg(k, def, 'number', parseFloat, isNaN)
+
+  #-----------------------------------
+
+  bcfg : (k, def = null) ->
+    @tcfg(k, def, 'boolean', ((b) -> b == 'true'), (k)->false)
 
   #-----------------------------------
 
@@ -115,7 +124,7 @@ exports.Base = class Base
   # ("dust")
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   account : () -> @cfg('account')
-  debug : () -> @cfg('debug')
+  debug : () -> @bcfg('debug')
 
   fee_per_byte_limit : () -> @icfg('fee-per-byte-limit')
   max_clearance_minutes : () -> @icfg('max-clearance-minutes')
@@ -123,13 +132,12 @@ exports.Base = class Base
   min_confirmations : () -> @icfg('min-confirmations', 3)
   abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
   # each small transaction is roughly 180B, so we pay for that plus dust
-  min_amount : () -> @amount() + @marginal_fee_per_byte * 190
+  min_amount : () -> @amount() + @marginal_fee_per_byte
 
-  # Some reasonable lower bound on the total cost to transact
-  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte * 190
-
-  # so just between 1 kb and 2kb..?, letting dust be negligble
-  max_amount : () -> 2*@marginal_fee_per_byte*1000
+  # Some reasonable lower bound on the total cost to transact a 1 input/1output transaction
+  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte * SUP_MIN_TX_SIZE
+  # Some reasonable upper bound on the total cost to transact a 1 input/1output transaction
+  max_amount : () -> 2 * @marginal_fee_per_byte * SUP_MIN_TX_SIZE
 
   #-----------------------------------
 

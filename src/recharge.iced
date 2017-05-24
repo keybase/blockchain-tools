@@ -68,7 +68,7 @@ exports.Runner = class Runner extends Base
     else if not @fee_per_byte_limit()? then err = new Error "need to specify fee-per-byte-limit in config file"
     else if not @max_clearance_minutes()? then err = new Error "need to specify max-clearance-minutes in config file"
     else if not @padding()? then err = new Error "need to specify padding in config file"
-    else if not @debug()? then err = new Error "need to specify debug in config filG"
+    else if not @debug()? then err = new Error "need to specify debug with -d parameter or in config file"
     cb err
 
   #-----------------------------------
@@ -137,12 +137,12 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   run : (argv, cb) ->
-    if @debug
+    esc = make_esc cb, "Runner::main"
+    await @init argv, esc defer()
+    if @debug()
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
-    esc = make_esc cb, "Runner::main"
-    await @init argv, esc defer()
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_change_address esc defer()
