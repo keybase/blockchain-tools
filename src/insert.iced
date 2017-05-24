@@ -114,12 +114,12 @@ exports.Runner = class Runner extends Base
   #-----------------------------------
 
   run : (argv, cb) ->
+    esc = make_esc cb, "Runner::main"
+    await @init argv, esc defer()
     if @debug()
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
-    esc = make_esc cb, "Runner::main"
-    await @init argv, esc defer()
     await @do_insert esc defer()
     cb null
 
