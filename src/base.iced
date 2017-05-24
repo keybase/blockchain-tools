@@ -132,7 +132,7 @@ exports.Base = class Base
   min_confirmations : () -> @icfg('min-confirmations', 3)
   abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
   # each small transaction is roughly 180B, so we pay for that plus dust
-  min_amount : () -> @amount() + @marginal_fee_per_byte
+  min_amount : () -> @amount() + @marginal_fee_per_byte * SUP_MIN_TX_SIZE
 
   # Some reasonable lower bound on the total cost to transact a 1 input/1output transaction
   abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte * SUP_MIN_TX_SIZE
