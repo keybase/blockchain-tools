@@ -130,12 +130,12 @@ exports.Base = class Base
   max_clearance_minutes : () -> @icfg('max-clearance-minutes')
   padding : () -> @fcfg('padding')
   min_confirmations : () -> @icfg('min-confirmations', 3)
-  abs_min_marginal_fee_per_byte: () -> btcjs.networks.bitcoin.feePerKb/1000
   # each small transaction is roughly 180B, so we pay for that plus dust
   min_amount : () -> @amount() + @marginal_fee_per_byte * SUP_MIN_TX_SIZE
 
   # Some reasonable lower bound on the total cost to transact a 1 input/1output transaction
-  abs_min_amount : () -> @amount() + @abs_min_marginal_fee_per_byte * SUP_MIN_TX_SIZE
+  # Assuming bitcoin tx fees won't go up 33% in one week
+  abs_min_amount : () -> @amount() + @marginal_fee_per_byte * SUP_MIN_TX_SIZE * .75
   # Some reasonable upper bound on the total cost to transact a 1 input/1output transaction
   max_amount : () -> 2 * @marginal_fee_per_byte * SUP_MIN_TX_SIZE
 
