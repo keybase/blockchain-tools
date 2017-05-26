@@ -41,6 +41,7 @@ exports.Base = class Base
       p : 'bitcoin-password'
       m : 'min-confirmations'
       d : 'debug'
+      v : 'verbose'
     string : [ ]
   }
 
@@ -185,7 +186,6 @@ exports.Base = class Base
   fee_estimator : ({tx}, cb) ->
     feePerByte = Math.min @fee_per_byte_limit(), @marginal_fee_per_byte
     byteSize = tx.toBuffer().length
-    console.log feePerByte * 327 * @padding()
     return feePerByte * byteSize * @padding()
 
   initialize_marginal_fee_per_byte_estimate : (cb) ->
