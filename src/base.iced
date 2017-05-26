@@ -240,7 +240,7 @@ exports.Base = class Base
       if @logging()
         console.log "--------"
         console.log "Considering tx", tx
-      if not (waste = @is_good_input_tx(tx))? then
+      if not (waste = @is_good_input_tx(tx))? 
         if @logging()
           console.log "Rejected because was not good."
       else if not(best_waste?) or waste < best_waste
