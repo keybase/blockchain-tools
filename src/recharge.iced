@@ -39,9 +39,20 @@ exports.Runner = class Runner extends Base
   is_good_input_tx : (tx) ->
     amt = tx.amount * SATOSHI_PER_BTC
     diff = amt - @tx_rough_total()
-    if (diff > 0) and (tx.account is @account()) and (tx.confirmations >= @min_confirmations())
+    diff_check = diff > 0
+    account_check = tx.account is @account()
+    confirmation_check = tx.confirmations >= @min_confirmations()
+    if @logging()
+      console.log "diff_check",diff_check
+      console.log "account_check",account_check
+      console.log "confirmation_check",confirmation_check
+    if diff_check and account_check and confirmation_check
+      if @logging()
+        console.log "tx passes all checks."
       ret = -diff # We want the transaction with the most wiggle room, not the least...
     else
+      if @logging()
+        console.log "tx does not pass all checks."
       ret = null
     return ret
 
@@ -101,7 +112,7 @@ exports.Runner = class Runner extends Base
 
     fee = @fee_estimator { tx: tx }
 
-    if @debug()
+    if @logging()
       expected_fee = num*@min_amount() + fee
       console.log 'Number of inner transactions: ', num
       console.log "Expected total fee: #{expected_fee} satoshis, #{expected_fee * @usd_per_satoshi} USD"
@@ -144,6 +155,10 @@ exports.Runner = class Runner extends Base
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
+    if @verbose()
+      console.log("Running in verbose mode")
+    else
+      console.log("Not running in verbose mode")
     await @find_transaction esc defer()
     await @get_private_key esc defer()
     await @make_change_address esc defer()
