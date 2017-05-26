@@ -195,7 +195,7 @@ exports.Base = class Base
     }
     await @aassert opts.maxClearanceMinutes?, esc defer()
     await @marginal_fee_per_byte_estimator opts, esc defer @marginal_fee_per_byte
-    if @debug || @verbose
+    if @debug() || @verbose()
       console.log "Initialized marginal_fee_per_byte at", @marginal_fee_per_byte
     cb null
 
@@ -212,7 +212,7 @@ exports.Base = class Base
   initialize_satoshi_conversion_estimate : (cb) ->
     esc = make_esc cb,'initialize_satoshi_conversion_estimate'
     await @satoshi_conversion_estimator esc defer @usd_per_satoshi
-    if @debug || @verbose
+    if @debug() || @verbose()
       console.log "Initialized usd_per_satoshi at", @usd_per_satoshi
     cb null
 

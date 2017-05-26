@@ -41,7 +41,7 @@ exports.Runner = class Runner extends Base
     max_amt_check = amt <= @max_amount()
     confirmation_check = tx.confirmations >= @min_confirmations()
     valid_account_check = not(a = @account())? or (tx.account is a)
-    if @debug || @verbose
+    if @debug() || @verbose()
       console.log "address_check",address_check
       console.log "min_amt_check",min_amt_check
       console.log "max_amt_check",max_amt_check
