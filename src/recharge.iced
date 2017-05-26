@@ -42,16 +42,16 @@ exports.Runner = class Runner extends Base
     diff_check = diff > 0
     account_check = tx.account is @account()
     confirmation_check = tx.confirmations >= @min_confirmations()
-    if @debug() || @verbose()
+    if @logging()
       console.log "diff_check",diff_check
       console.log "account_check",account_check
       console.log "confirmation_check",confirmation_check
     if diff_check and account_check and confirmation_check
-      if @debug() || @verbose()
+      if @logging()
         console.log "tx passes all checks."
       ret = -diff # We want the transaction with the most wiggle room, not the least...
     else
-      if @debug() || @verbose()
+      if @logging()
         console.log "tx does not pass all checks."
       ret = null
     return ret
@@ -112,7 +112,7 @@ exports.Runner = class Runner extends Base
 
     fee = @fee_estimator { tx: tx }
 
-    if @debug() || @verbose()
+    if @logging()
       expected_fee = num*@min_amount() + fee
       console.log 'Number of inner transactions: ', num
       console.log "Expected total fee: #{expected_fee} satoshis, #{expected_fee * @usd_per_satoshi} USD"

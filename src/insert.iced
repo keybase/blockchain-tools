@@ -41,7 +41,7 @@ exports.Runner = class Runner extends Base
     max_amt_check = amt <= @max_amount()
     confirmation_check = tx.confirmations >= @min_confirmations()
     valid_account_check = not(a = @account())? or (tx.account is a)
-    if @debug() || @verbose()
+    if @logging()
       console.log "address_check",address_check
       console.log "min_amt_check",min_amt_check
       console.log "max_amt_check",max_amt_check
@@ -50,11 +50,11 @@ exports.Runner = class Runner extends Base
     if address_check and min_amt_check and
         max_amt_check and confirmation_check and
         valid_account_check
-      if @debug() || @verbose()
+      if @logging()
         console.log("tx passes all checks.")
       ret = amt - @abs_min_amount()
     else
-      if @debug() || @verbose()
+      if @logging()
         console.log("tx does not pass all checks.")
       ret = null
 
@@ -88,7 +88,7 @@ exports.Runner = class Runner extends Base
     @data_to_address = (new btcjs.Address @post_data, 0).toBase58Check()
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
-    if @debug() || @verbose()
+    if @logging()
       console.log "Expected cost: #{@amount()} satoshis, #{@amount() * @usd_per_satoshi} USD"
     tx.addOutput @data_to_address, @amount()
     skey = btcjs.ECKey.fromWIF @priv_key
