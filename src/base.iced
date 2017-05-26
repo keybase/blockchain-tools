@@ -125,6 +125,7 @@ exports.Base = class Base
   amount : () -> @icfg('amount', btcjs.networks.bitcoin.dustThreshold+1)
   account : () -> @cfg('account')
   debug : () -> @bcfg('debug')
+  verbose : () -> @bcfg('verbose', false)
 
   fee_per_byte_limit : () -> @icfg('fee-per-byte-limit')
   max_clearance_minutes : () -> @icfg('max-clearance-minutes')
@@ -194,6 +195,8 @@ exports.Base = class Base
     }
     await @aassert opts.maxClearanceMinutes?, esc defer()
     await @marginal_fee_per_byte_estimator opts, esc defer @marginal_fee_per_byte
+    if @debug || @verbose
+      console.log "Initialized marginal_fee_per_byte at", @marginal_fee_per_byte
     cb null
 
   satoshi_conversion_estimator : (cb) ->
@@ -209,6 +212,8 @@ exports.Base = class Base
   initialize_satoshi_conversion_estimate : (cb) ->
     esc = make_esc cb,'initialize_satoshi_conversion_estimate'
     await @satoshi_conversion_estimator esc defer @usd_per_satoshi
+    if @debug || @verbose
+      console.log "Initialized usd_per_satoshi at", @usd_per_satoshi
     cb null
 
   make_bitcoin_client : (cb) ->
@@ -226,15 +231,30 @@ exports.Base = class Base
   find_transaction : (cb) ->
     esc = make_esc cb, "Runner::find_transaction"
     await @client.listUnspent esc defer txs
+    if @debug() || @verbose()
+      console.log("Found", txs.length, "unspent transactions")
     best_tx = null
     best_waste = null
     for tx in txs
-      if not (waste = @is_good_input_tx(tx))? then # noop
+      if @debug() || @verbose()
+        console.log "--------"
+        console.log "Considering tx", tx
+      if not (waste = @is_good_input_tx(tx))? then
+        if @debug() || @verbose()
+          console.log "Rejected because was not good."
       else if not(best_waste?) or waste < best_waste
+        if @debug() || @verbose()
+          console.log "Replacing best_tx with this tx."
+          console.log "Previous waste", best_waste
+          console.log "New waste", waste
         best_tx = tx
         best_waste = waste
+      if @debug() || @verbose()
+        console.log "-------"
     if best_tx?
       @input_tx = best_tx
+      if @debug() || @verbose()
+        console.log "Found best tx", best_tx
     else
       err = new Error "Couldn't find spendable input transaction"
     cb err

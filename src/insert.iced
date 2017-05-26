@@ -36,12 +36,26 @@ exports.Runner = class Runner extends Base
 
   is_good_input_tx : (tx) ->
     amt = tx.amount * SATOSHI_PER_BTC
-    if (tx.address is @from_address()) and
-         (amt >= @abs_min_amount() and (amt <= @max_amount())) and
-         (tx.confirmations >= @min_confirmations()) and
-         (not(a = @account())? or (tx.account is a))
-      ret = amt - @min_amount()
+    address_check = tx.address is @from_address()
+    min_amt_check = amt >= @abs_min_amount()
+    max_amt_check = amt <= @max_amount()
+    confirmation_check = tx.confirmations >= @min_confirmations()
+    valid_account_check = not(a = @account())? or (tx.account is a)
+    if @debug || @verbose
+      console.log "address_check",address_check
+      console.log "min_amt_check",min_amt_check
+      console.log "max_amt_check",max_amt_check
+      console.log "confirmation_check",confirmation_check
+      console.log "valid_account_check",valid_account_check
+    if address_check and min_amt_check and
+        max_amt_check and confirmation_check and
+        valid_account_check
+      if @debug() || @verbose()
+        console.log("tx passes all checks.")
+      ret = amt - @abs_min_amount()
     else
+      if @debug() || @verbose()
+        console.log("tx does not pass all checks.")
       ret = null
 
   #-----------------------------------
@@ -74,8 +88,8 @@ exports.Runner = class Runner extends Base
     @data_to_address = (new btcjs.Address @post_data, 0).toBase58Check()
     tx = new btcjs.Transaction
     tx.addInput @input_tx.txid, @input_tx.vout
-    if @debug()
-      console.log("Transaction amount is ", @amount)
+    if @debug() || @verbose()
+      console.log "Expected cost: #{@amount()} satoshis, #{@amount() * @usd_per_satoshi} USD"
     tx.addOutput @data_to_address, @amount()
     skey = btcjs.ECKey.fromWIF @priv_key
     tx.sign 0, skey
@@ -120,6 +134,10 @@ exports.Runner = class Runner extends Base
       console.log("Running in debug mode")
     else
       console.log("Not running in debug mode")
+    if @verbose()
+      console.log("Running in verbose mode")
+    else
+      console.log("Not running in verbose mode")
     await @do_insert esc defer()
     cb null
 
